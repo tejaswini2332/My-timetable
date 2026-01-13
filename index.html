@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Creator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 { text-align: center; color: #444; margin-bottom: 20px; }
+
+        /* --- Control Panel --- */
+        .controls {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 850px;
+            margin: 0 auto 30px auto;
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 0.9em; margin-bottom: 5px; font-weight: 600; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #34495e; }
+        button.reset { background-color: #c0392b; }
+        button.reset:hover { background-color: #e74c3c; }
+
+        .hint-text {
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* --- Timetable --- */
+        .timetable-container {
+            overflow-x: auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 50px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+            table-layout: fixed;
+        }
+
+        thead tr { background-color: #2c3e50; color: #ffffff; }
+        
+        th, td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            height: 55px;
+            vertical-align: middle;
+            font-size: 0.95em;
+            user-select: none;
+        }
+
+        tbody th { background-color: #34495e; color: #fff; width: 90px; }
+
+        .lunch {
+            background-color: #e2e6ea;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            width: 40px;
+            color: #666;
+        }
+
+        /* Default Slot Styling */
+        td.slot-cell {
+            background-color: #fafafa;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: background 0.3s;
+            position: relative;
+        }
+        
+        td.slot-cell:hover {
+            background-color: #eaeaea;
+        }
+
+        .lab-hint {
+            display: block;
+            font-size: 0.7em;
+            color: #bbb;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        /* Filled State */
+        .filled {
+            color: #fff !important;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .filled .lab-hint { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Timetable Creator</h1>
+
+    <div class="controls">
+        <div class="input-group">
+            <label>Course Code</label>
+            <input type="text" id="courseCode" placeholder="e.g. CS3500">
+        </div>
+
+        <div class="input-group">
+            <label>Select Slot</label>
+            <select id="slotSelect">
+                <optgroup label="Morning Theory">
+                    <option value="A">Slot A</option>
+                    <option value="B">Slot B</option>
+                    <option value="C">Slot C</option>
+                    <option value="D">Slot D</option>
+                    <option value="E">Slot E</option>
+                    <option value="F">Slot F</option>
+                    <option value="G">Slot G</option>
+                </optgroup>
+                <optgroup label="Afternoon Theory">
+                    <option value="H">Slot H</option>
+                    <option value="M">Slot M</option>
+                    <option value="J">Slot J</option>
+                    <option value="K">Slot K</option>
+                    <option value="L">Slot L</option>
+                </optgroup>
+                <optgroup label="Afternoon Labs (Parallel)">
+                    <option value="P">Slot P (Mon Lab)</option>
+                    <option value="Q">Slot Q (Tue Lab)</option>
+                    <option value="R">Slot R (Wed Lab)</option>
+                    <option value="S">Slot S (Thu Lab)</option>
+                    <option value="T">Slot T (Fri Lab)</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Color</label>
+            <input type="color" id="colorPicker" value="#3498db">
+        </div>
+
+        <button onclick="addCourse()">Add Course</button>
+        <button class="reset" onclick="resetTable()">Reset All</button>
+
+        <div class="hint-text">
+            💡 Tip: <strong>Double-click</strong> any cell to clear it individually.
+        </div>
+    </div>
+
+    <div class="timetable-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>08:00</th>
+                    <th>09:00</th>
+                    <th>10:00</th>
+                    <th>11:00</th>
+                    <th>12:00</th>
+                    <th>13:00</th>
+                    <th>14:00</th>
+                    <th>15:30</th>
+                    <th>17:00</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Mon</th>
+                    <td class="slot-cell" data-slot="A">A1</td>
+                    <td class="slot-cell" data-slot="B">B1</td>
+                    <td class="slot-cell" data-slot="C">C1</td>
+                    <td class="slot-cell" data-slot="D">D1</td>
+                    <td rowspan="5" class="lunch">LUNCH</td>
+                    <td class="slot-cell" data-slot="G">G1</td>
+                    <td class="slot-cell" data-slot="H" data-lab="P">H1 <span class="lab-hint">(or P)</span></td>
+                    <td class="slot-cell" data-slot="M" data-lab="P">M2 <span class="lab-hint">(or P)</span></td>
+                    <td class="slot-cell" data-slot="J">J3</td>
+                </tr>
+
+                <tr>
+                    <th>Tue</th>
+                    <td class="slot-cell" data-slot="B">B2</td>
+                    <td class="slot-cell" data-slot="C">C2</td>
+                    <td class="slot-cell" data-slot="D">D2</td>
+                    <td class="slot-cell" data-slot="E">E1</td>
+                    <td class="slot-cell" data-slot="A">A2</td>
+                    <td class="slot-cell" data-slot="M" data-lab="Q">M1 <span class="lab-hint">(or Q)</span></td>
+                    <td class="slot-cell" data-slot="H" data-lab="Q">H2 <span class="lab-hint">(or Q)</span></td>
+                    <td class="slot-cell" data-slot="F">F1</td>
+                </tr>
+
+                <tr>
+                    <th>Wed</th>
+                    <td class="slot-cell" data-slot="C">C3</td>
+                    <td class="slot-cell" data-slot="D">D3</td>
+                    <td class="slot-cell" data-slot="E">E2</td>
+                    <td class="slot-cell" data-slot="F">F2</td>
+                    <td class="slot-cell" data-slot="B">B3</td>
+                    <td class="slot-cell" data-slot="J" data-lab="R">J1 <span class="lab-hint">(or R)</span></td>
+                    <td class="slot-cell" data-slot="K" data-lab="R">K2 <span class="lab-hint">(or R)</span></td>
+                    <td class="slot-cell" data-slot="G">G2</td>
+                </tr>
+
+                <tr>
+                    <th>Thu</th>
+                    <td class="slot-cell" data-slot="E">E3</td>
+                    <td class="slot-cell" data-slot="F">F3</td>
+                    <td class="slot-cell" data-slot="G">G3</td>
+                    <td class="slot-cell" data-slot="A">A3</td>
+                    <td class="slot-cell" data-slot="D">D4</td>
+                    <td class="slot-cell" data-slot="L" data-lab="S">L1 <span class="lab-hint">(or S)</span></td>
+                    <td class="slot-cell" data-slot="J" data-lab="S">J2 <span class="lab-hint">(or S)</span></td>
+                    <td class="slot-cell" data-slot="H">H3</td>
+                </tr>
+
+                <tr>
+                    <th>Fri</th>
+                    <td class="slot-cell" data-slot="F">F4</td>
+                    <td class="slot-cell" data-slot="G">G4</td>
+                    <td class="slot-cell" data-slot="A">A4</td>
+                    <td class="slot-cell" data-slot="B">B4</td>
+                    <td class="slot-cell" data-slot="C">C4</td>
+                    <td class="slot-cell" data-slot="K" data-lab="T">K1 <span class="lab-hint">(or T)</span></td>
+                    <td class="slot-cell" data-slot="L" data-lab="T">L2 <span class="lab-hint">(or T)</span></td>
+                    <td class="slot-cell" data-slot="E">E4*</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cells = document.querySelectorAll('.slot-cell');
+            cells.forEach(cell => {
+                // Store original content to restore later
+                cell.dataset.originalHtml = cell.innerHTML;
+                
+                // Add Double Click to delete
+                cell.addEventListener('dblclick', function() {
+                    if (this.classList.contains('filled')) {
+                        this.innerHTML = this.dataset.originalHtml;
+                        this.style.backgroundColor = '#fafafa';
+                        this.classList.remove('filled');
+                    }
+                });
+            });
+        });
+
+        function addCourse() {
+            const code = document.getElementById('courseCode').value;
+            const slot = document.getElementById('slotSelect').value;
+            const color = document.getElementById('colorPicker').value;
+            const isLab = ['P','Q','R','S','T'].includes(slot);
+
+            if (!code) {
+                alert("Please enter a course code.");
+                return;
+            }
+            
+            let targets;
+            if (isLab) {
+                targets = document.querySelectorAll(`td[data-lab="${slot}"]`);
+            } else {
+                targets = document.querySelectorAll(`td[data-slot="${slot}"]`);
+            }
+
+            if (targets.length === 0) {
+                alert("No slots found for " + slot);
+                return;
+            }
+
+            targets.forEach(cell => {
+                cell.innerHTML = code;
+                cell.style.backgroundColor = color;
+                cell.classList.add('filled');
+            });
+        }
+
+        function resetTable() {
+            if(confirm("Clear all courses?")) {
+                location.reload(); 
+            }
+        }
+    </script>
+
+</body>
+</html>
